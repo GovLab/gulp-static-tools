@@ -102,6 +102,14 @@ gulp.task('js', function() {
   .pipe(browserSync.stream());
 });
 
+gulp.task('distJs', function () {
+  return gulp.src('node_modules/govlab-styleguide/js/**/*', 'source/js/**/*'])
+  .pipe(plumber())
+  .pipe(rename('guide/js'))
+  .pipe(gulp.dest('dist/js'))
+});
+
+
 gulp.task('generateTemplates', function() {
   return generateVinyl(generatedData, options.path + options.generatedPath, options.generatedTemplate)
   .pipe(gulp.dest(options.path + options.generatedPath))
