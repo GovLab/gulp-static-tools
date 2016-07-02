@@ -9,7 +9,7 @@ plumber         = require('gulp-plumber'),
 yaml            = require('gulp-yaml'),
 flatten         = require('gulp-flatten'),
 intercept       = require('gulp-intercept'),
-bs              = require('browser-sync').create(),
+browserSync     = require('browser-sync'),
 minimist        = require('minimist'),
 File            = require('vinyl'),
 es              = require('event-stream'),
@@ -23,12 +23,6 @@ packagejson     = require('./package.json')
 // get arguments from command line
 var argv = minimist(process.argv.slice(2));
 
-// command line options (usage: gulp --optionname)
-var cliOptions = {
-  verbose   : false || argv.verbose,
-  nosync    : false || argv.nosync
-};
-
 // gulpfile options
 var options = {
   path: './source/templates/', // base path to templates
@@ -40,15 +34,14 @@ var options = {
   defaultData: './source/data/default.json' // default dataset to use if no automatically generated template is found
 };
 
-// initialize browsersync
-gulp.task('bs', function() {
-  if (!cliOptions.nosync) {
-    bs.init({
-      server: 'public',
-      open: false
-    });
-  }
-});
+// Browser Sync
+gulp.task('browserSync', function() {
+  browserSync({
+    server: {
+      baseDir: 'public'
+    },
+  })
+})
 
 // define custom functions ///////////////////////////////////
 
@@ -171,8 +164,7 @@ function generateVinyl(basePath, dataPath, fPrefix, fSuffix, dSuffix) {
 gulp.task('sass', function() {
   return gulp.src('source/sass/styles.scss')
   .pipe(sass().on('error', sass.logError))
-  .pipe(gulp.dest('public/css'))
-  .pipe(cliOptions.nosync ? bs.stream() : util.noop());
+  .pipe(gulp.dest('public/css'));
 });
 
 gulp.task('libCss', function() {
@@ -191,15 +183,13 @@ gulp.task('libJs', function() {
 gulp.task('js', ['libJs'], function() {
   return gulp.src('source/js/**/*')
   .pipe(plumber())
-  .pipe(gulp.dest('public/js'))
-  .pipe(cliOptions.nosync ? bs.stream() : util.noop());
+  .pipe(gulp.dest('public/js'));
 });
 
 gulp.task('img', function() {
   return gulp.src('source/img/**/*')
   .pipe(plumber())
-  .pipe(gulp.dest('public/img'))
-  .pipe(cliOptions.nosync ? bs.stream() : util.noop());
+  .pipe(gulp.dest('public/img'));
 });
 
 gulp.task('yaml', function () {
@@ -228,9 +218,7 @@ gulp.task('json', ['yaml'], function() {
             }
           }
         }
-        if (cliOptions.verbose) {
-          util.log(util.colors.magenta('Converting yaml ' + file.path), 'to json as', util.colors.blue(JSON.stringify(b)));
-        }
+        util.log(util.colors.magenta('Converting yaml ' + file.path), 'to json as', util.colors.blue(JSON.stringify(b)));
         file.contents = new Buffer(JSON.stringify(b));
       }
       return file;
@@ -255,9 +243,7 @@ gulp.task('nunjucks', ['generateTemplates'], function() {
       for (var i in generatedData[datasetName]) {
         var r = new RegExp(datasetName + '\\/' + generatedData[datasetName][i].id)
         if (r.test(file.path)) {
-          if (cliOptions.verbose) {
-            util.log(util.colors.green('Found Generated Template ' + file.path), ': using', JSON.stringify(generatedData[datasetName][i]));
-          }
+          util.log(util.colors.green('Found Generated Template ' + file.path), ': using', JSON.stringify(generatedData[datasetName][i]));
           // return data matching id in dataset datasetName
           var d = generatedData[datasetName][i];
           // add all datasets as special prop $global
@@ -285,7 +271,7 @@ gulp.task('deploy', ['build'], shell.task([
   ])
 );
 
-gulp.task('default', ['bs', 'build'], function (){
+gulp.task('default', ['browserSync', 'build'], function (){
   gulp.watch('source/sass/**/*.scss', ['sass']);
   gulp.watch('source/templates/**/*.html', ['nunjucks']);
   gulp.watch('source/img/**/*', ['img']);
